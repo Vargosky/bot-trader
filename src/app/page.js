@@ -37,9 +37,9 @@ export default async function RadarDashboard() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800/60 pb-5">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              <Activity className="text-blue-500" /> Terminal Einsoft
+              <Activity className="text-blue-500" /> TRADERBOT
             </h1>
-            <p className="text-slate-400 text-sm mt-1 uppercase tracking-widest font-medium">Radar de Riesgo Sistémico</p>
+            <p className="text-slate-400 text-sm mt-1 uppercase tracking-widest font-medium">Radar de Riesgo Sistémico de Einsoft</p>
           </div>
           <div className="text-left md:text-right mt-4 md:mt-0 bg-slate-900 p-3 md:px-5 rounded-lg border border-slate-800 shadow-sm">
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Última actualización (Valparaíso)</p>
