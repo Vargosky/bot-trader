@@ -56,6 +56,7 @@ export default async function RadarDashboard() {
               }).replace(',', ' |')}
             </p>
           </div>
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Completamente especulativo. Uso privado</p>
         </header>
 
         {/* ALERTA VISUAL: SEMÁFORO Y ORDEN */}
