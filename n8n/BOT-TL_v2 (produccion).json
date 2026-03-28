@@ -1,0 +1,800 @@
+{
+  "name": "BOT-TL_v2",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return [\n  { ticker: '^VIX' },\n  { ticker: 'CL=F' },\n  { ticker: 'GC=F' },\n  { ticker: '^TNX' },\n  { ticker: 'DX-Y.NYB' }, // El Índice del Dólar\n  { ticker: 'HG=F' }      // Futuros del Cobre\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        192
+      ],
+      "id": "82266bb1-0b75-4857-bce3-5e67b7456891",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=https://query1.finance.yahoo.com/v8/finance/chart/{{ $json.ticker }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "range",
+              "value": "5d"
+            },
+            {
+              "name": "interval",
+              "value": "1d"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -48,
+        208
+      ],
+      "id": "54596c68-08ca-46a6-99a1-52763a459196",
+      "name": "HTTP Request",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -528,
+        192
+      ],
+      "id": "f42e5f7e-8c9d-4b7d-af66-0dfedc728825",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resultados = $input.all();\n\n// Si solo llegó 1 item (loop no terminó aún), no procesar\nif (resultados.length < 6) {\n  return [{ json: { _debug: `Solo ${resultados.length} items recibidos, esperando más` } }];\n}\n\nlet fila = /** @type {Record<string, unknown>} */ ({});\n\nresultados.forEach(item => {\n  // Defensive: verifica que la estructura exista\n  const result = item.json?.chart?.result?.[0];\n  if (!result) return;\n\n  const meta = result.meta;\n  const closes = result.indicators?.quote?.[0]?.close ?? [];\n  \n  const valid = closes.filter(v => v != null && !isNaN(v));\n  const prev  = valid.length >= 2 ? valid[valid.length - 2] : null;\n  const curr  = meta.regularMarketPrice;\n  const delta = prev != null\n    ? parseFloat(((curr - prev) / prev * 100).toFixed(2))\n    : null;\n\n  const map = {\n    '^VIX':     ['vix',     'vix_delta'],\n    'CL=F':     ['wti',     'wti_delta'],\n    'GC=F':     ['oro',     'oro_delta'],\n    '^TNX':     ['bono10y', 'bono10y_delta'],\n    'DX-Y.NYB': ['dxy',     'dxy_delta'],\n    'HG=F':     ['cobre',   'cobre_delta'],\n  };\n\n  const keys = map[meta.symbol];\n  if (keys) {\n    fila[keys[0]] = curr;\n    fila[keys[1]] = delta;\n  }\n});\n\n// Verifica que llegaron los 6 símbolos esperados\nconst esperados = ['vix','wti','oro','bono10y','dxy','cobre'];\nconst faltantes = esperados.filter(k => fila[k] === undefined);\nif (faltantes.length > 0) {\n  fila._advertencia = `Faltan datos de: ${faltantes.join(', ')}`;\n}\n\nreturn [{ json: fila }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6f395f36-f873-4dd3-9e81-468a85d66496",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "url": "https://mindicador.cl/api/uf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        272,
+        0
+      ],
+      "id": "a5a57985-a3ec-4062-998f-fcd6acaa9f46",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "url": "https://mindicador.cl/api/tpm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        512,
+        0
+      ],
+      "id": "b4993ffa-ee63-4394-aae0-22cd1d34f1af",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "56b23502-bb41-4c01-9309-8d67599d0e6e",
+              "name": "uf",
+              "value": "={{ $('HTTP Request1').item.json.serie[0].valor }}",
+              "type": "number"
+            },
+            {
+              "id": "dfcd089d-a1ff-46b1-8581-824de6ef311c",
+              "name": "tpm",
+              "value": "={{ $json.serie[0].valor }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        0
+      ],
+      "id": "ed5ac250-a5c9-4e54-a03b-70abe283762f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dcfaebde-e384-4063-9b48-cbfafd34a876",
+              "name": "uf",
+              "value": "={{ $json.uf }}",
+              "type": "number"
+            },
+            {
+              "id": "5d578aa1-8e26-4df1-a3e9-f34c263cf4d5",
+              "name": "tpm",
+              "value": "={{ $json.tpm }}",
+              "type": "number"
+            },
+            {
+              "id": "4eafbb72-736d-4871-888f-5f0a0e112136",
+              "name": "vix",
+              "value": "={{ $('Code in JavaScript1').item.json.vix }}",
+              "type": "number"
+            },
+            {
+              "id": "80357c69-f882-47f9-abb2-71fd1e99c875",
+              "name": "wti",
+              "value": "={{ $('Code in JavaScript1').item.json.wti }}",
+              "type": "number"
+            },
+            {
+              "id": "927c9359-468c-4fd7-a666-6de9c2f08679",
+              "name": "oro",
+              "value": "={{ $('Code in JavaScript1').item.json.oro }}",
+              "type": "number"
+            },
+            {
+              "id": "c9365ba1-20f2-4528-ad43-9b63ae42895a",
+              "name": "bono10y",
+              "value": "={{ $('Code in JavaScript1').item.json.bono10y }}",
+              "type": "number"
+            },
+            {
+              "id": "bae4727c-f4dc-4813-9537-554b08f903d8",
+              "name": "dxy",
+              "value": "={{ $('Code in JavaScript1').item.json.dxy }}",
+              "type": "number"
+            },
+            {
+              "id": "0a7c4988-8bf4-4652-b63e-dbbbe9ea2413",
+              "name": "cobre",
+              "value": "={{ $('Code in JavaScript1').item.json.cobre }}",
+              "type": "number"
+            },
+            {
+              "id": "72747091-95bc-43bb-be67-3d729c9435f2",
+              "name": "saldo_sp500",
+              "value": 84128,
+              "type": "number"
+            },
+            {
+              "id": "8559fb65-9e04-4e92-a3d3-146a2084a0a3",
+              "name": "saldo_silicon",
+              "value": 36243,
+              "type": "number"
+            },
+            {
+              "id": "aeffe505-7dd2-45d1-bab4-e55ffb764188",
+              "name": "saldo_nasdaq",
+              "value": 14056,
+              "type": "number"
+            },
+            {
+              "id": "27ef3668-531a-4427-bf38-bab6dd5ce186",
+              "name": "vix_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.vix_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "7dd6d997-d082-4552-ad19-fca2c808fae9",
+              "name": "wti_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.wti_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "a27322db-d91b-4956-bc1b-b306fae5e4e6",
+              "name": "oro_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.oro_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "2570a75a-fb1a-4bda-ae90-0e9c27ace0b1",
+              "name": "bono10y_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.bono10y_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "e2bedb67-45de-48d1-83c6-f6426a4fd58a",
+              "name": "dxy_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.dxy_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "9f4ef4a3-d2be-4eaa-a0dd-025dd7cc0ea6",
+              "name": "cobre_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.cobre_delta }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        0
+      ],
+      "id": "cacc6edd-8a61-4aa2-9e63-444cd364aa39",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -272,
+        208
+      ],
+      "id": "df4c1bb2-705d-4a6f-96d9-6b8f65481e52",
+      "name": "Wait",
+      "webhookId": "450aca4a-7e23-410c-ba5a-27c72b85ab84"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        208
+      ],
+      "id": "0d953952-d900-4e9b-9d88-8514ece017e6",
+      "name": "Wait1",
+      "webhookId": "450aca4a-7e23-410c-ba5a-27c72b85ab84"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres el motor de análisis macroeconómico cuantitativo para la Caja Táctica de Einsoft. Tu único objetivo es procesar la telemetría del mercado, evaluar el riesgo sistémico paso a paso y emitir una orden de ejecución financiera binaria, fría y sin sesgos.\n\nNo uses saludos. No agregues advertencias de riesgo. Tu salida debe ser exclusivamente el análisis algorítmico y la orden.\n\n---\nREGLAS DEL PORTAFOLIO Y POSICIÓN ACTUAL:\n- Esquema 50/50. El 50% en S&P 500 (CFISP500) es intocable.\n- Solo administras la \"Caja Táctica\" (Saldo Silicon Fund + Saldo Nasdaq100).\n- REGLA DE EFICIENCIA: Evalúa si el capital ya está en el ticker correcto según el Estado. Si es así, emite MANTENER. Solo emite COMPRAR/VENDER si se requiere un cambio de trinchera.\n\n---\nREGLA DE DATOS CIEGOS (N/A):\nSi algún indicador de tendencia (ej: wti_delta, oro_delta) ingresa como \"N/A\" o vacío, asume matemáticamente un valor de 0% para esa variable y continúa la evaluación con los datos disponibles. No declares errores ni detengas el análisis.\n\n---\nMATRIZ DE RIESGO BOOLEANA:\n\n1. ESTADO VERDE (Risk-On / Aceleración)\n- Condiciones (DEBEN CUMPLIRSE TODAS):\n  * VIX < 20\n  * bono10y_delta <= 0\n  * cobre_delta >= 0\n- Acción: 100% de la Caja Táctica a riesgo tecnológico (CFISNASDAQ o CFIAMDVASC).\n\n2. ESTADO AMARILLO (Alerta / Señales Mixtas)\n- Condiciones (SI SE CUMPLE ALGUNA):\n  * VIX entre 20 y 25, sin confirmación de pánico en otros indicadores.\n  * VIX > 25 pero con cobre_delta > 0 y dxy_delta < 0.5% (falsa alarma).\n  * VIX > 25 pero commodities (Oro y WTI) con delta < 2%.\n- Acción: Congelar gatillo. MANTENER posición actual.\n\n3. ESTADO ROJO (Risk-Off / Pánico Confirmado)\n- Condiciones (DEBE CUMPLIRSE AL MENOS UNA):\n  * A) VIX > 25 Y bono10y_delta > 0 (crédito caro).\n  * B) VIX > 22 Y oro_delta > 2% Y wti_delta > 2% (shock inflacionario/commodities).\n  * C) VIX > 28 de forma sostenida (pánico puro, ignora si los commodities están mixtos, excepto si es Cisne Negro).\n- Acción: Refugiar el 100% de la Caja Táctica en renta fija local (CFIETFCC).\n\n4. ESTADO CISNE NEGRO (Ruptura Sistémica)\n- Condiciones (DEBE CUMPLIRSE AL MENOS UNA):\n  * A) VIX > 32 Y (oro_delta > 2% O wti_delta > 3%).\n  * B) VIX > 30 Y oro_delta > 3% Y wti_delta > 4%.\n  * C) VIX > 35 (umbral de terror absoluto).\n- Acción: Liquidación total de riesgo. Buscar exposición a activos duros (GLD o ITA).\n\nREGLA DE PRIORIDAD: CISNE NEGRO > ROJO > AMARILLO > VERDE.\n\n---\nESTRUCTURA DE SALIDA OBLIGATORIA:\n\n[BITÁCORA DE CÁLCULO]: (Escribe en una sola línea tu proceso lógico. Ejemplo: \"VIX en 31 y Oro en +3.3%. Se activa la Condición B de Cisne Negro. La regla de prioridad anula el Estado Rojo\".)\n\n[ESTADO]: (VERDE / AMARILLO / ROJO / CISNE NEGRO)\n\n[NIVEL DE MIEDO]: VIX: {valor} ({delta}%). DXY: {valor} ({delta}%).\n[PULSO FÍSICO]: Oro: {valor} ({delta}%). WTI: {valor} ({delta}%). Cobre: {valor} ({delta}%).\n[ESCUDO LOCAL]: UF: {valor}. TPM: {valor}%. \n\n[ORDEN DE EJECUCIÓN]: COMPRAR/VENDER/MANTENER — Ticker: {ticker}. Monto: 100% de la Caja Táctica (CL${caja_tactica_total}).\n\n---\nDATOS TELEMÉTRICOS DE ENTRADA:\n\nuf: {{ $json.uf }}\ntpm: {{ $json.tpm }}\nvix: {{ $json.vix }} | vix_delta: {{ $json.vix_delta }}%\nwti: {{ $json.wti }} | wti_delta: {{ $json.wti_delta }}%\noro: {{ $json.oro }} | oro_delta: {{ $json.oro_delta }}%\nbono10y: {{ $json.bono10y }} | bono10y_delta: {{ $json.bono10y_delta }}%\ndxy: {{ $json.dxy }} | dxy_delta: {{ $json.dxy_delta }}%\ncobre: {{ $json.cobre }} | cobre_delta: {{ $json.cobre_delta }}%\n\nPORTAFOLIO (pesos chilenos):\nSaldo SP500: CL${{ $json.saldo_sp500 }}\nSaldo DVA Silicon Fund: CL${{ $json.saldo_silicon }}\nSaldo Nasdaq100: CL${{ $json.saldo_nasdaq }}\nCaja Táctica Total: CL${{ $json.saldo_silicon + $json.saldo_nasdaq }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1232,
+        0
+      ],
+      "id": "dfeefdae-03e0-4e89-93a8-c6adbb00c5d3",
+      "name": "Message a model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dzewo5lXlCBOfHDM",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "935a78eb-ad60-44ff-9af1-ed7071f40c5c",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        208
+      ],
+      "id": "6bd1e7b5-2df4-4ae4-80d3-f0d57e28ea71",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        448
+      ],
+      "id": "c3627a24-5b41-4327-abaa-4cc2e70a5ca0",
+      "name": "Wait2",
+      "webhookId": "1aad6fc9-c806-4f1f-8144-cc18845687da"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3d49530-aa8a-4990-afbf-8945d84d745b",
+              "name": "ticker",
+              "value": "={{ $('Loop Over Items').item.json.ticker }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        448
+      ],
+      "id": "69d568fe-2fce-4466-b6b4-937cfb196474",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Capturamos la respuesta cruda del nodo anterior (Gemini)\n// Ruta actualizada según la estructura de tu captura de pantalla:\nconst textoGemini = $input.item.json.content?.parts?.[0]?.text || \"\"; \n\n// 2. Función francotirador para extraer el contenido de cada etiqueta\nconst extraer = (etiqueta) => {\n  const regex = new RegExp(`\\\\[${etiqueta}\\\\]:\\\\s*(.*)`, 'i');\n  const match = textoGemini.match(regex);\n  return match ? match[1].trim() : null;\n};\n\n// 3. Extraemos las variables clave\nconst bitacora = extraer('BITÁCORA DE CÁLCULO');\nconst estado = extraer('ESTADO');\nconst ordenCompleta = extraer('ORDEN DE EJECUCIÓN');\n\n// 4. Desglosar la orden (Ej: \"COMPRAR — Ticker: GLD. Monto...\")\nlet accion = null;\nlet ticker = null;\n\nif (ordenCompleta) {\n  // Sacamos solo la palabra COMPRAR, VENDER o MANTENER\n  const accionMatch = ordenCompleta.match(/^(COMPRAR|VENDER|MANTENER)/i);\n  if (accionMatch) accion = accionMatch[1].toUpperCase();\n\n  // Sacamos solo las siglas del Ticker (ej. GLD, CFIETFCC)\n  const tickerMatch = ordenCompleta.match(/Ticker:\\s*([A-Z0-9]+)/i);\n  if (tickerMatch) ticker = tickerMatch[1].toUpperCase();\n}\n\n// 5. Retornamos el objeto JSON pulcro para Supabase\nreturn {\n  json: {\n    estado_ia: estado,\n    orden_ejecucion: accion,\n    ticker_objetivo: ticker,\n    bitacora_calculo: bitacora,\n    texto_crudo: textoGemini \n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "d8b6cfa5-784e-4782-a314-82d4fe1ed335",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "09ecc5b6-2ab9-48f0-93d8-66b2d2b39688",
+              "name": "estado_ia",
+              "value": "={{ $json.estado_ia }}",
+              "type": "string"
+            },
+            {
+              "id": "fbd956c9-b8a7-47d3-bdf0-e8a90454c988",
+              "name": "orden_ejecucion",
+              "value": "={{ $json.orden_ejecucion }}",
+              "type": "string"
+            },
+            {
+              "id": "7e913754-e394-48b7-af48-45b79cca5d8c",
+              "name": "ticker_objetivo",
+              "value": "={{ $json.ticker_objetivo }}",
+              "type": "string"
+            },
+            {
+              "id": "20abc738-747d-4156-88bd-3f0abdaf8432",
+              "name": "bitacora_calculo",
+              "value": "={{ $json.bitacora_calculo }}",
+              "type": "string"
+            },
+            {
+              "id": "c7811e86-e229-46a2-b5df-343294c90846",
+              "name": "texto_crudo",
+              "value": "={{ $json.texto_crudo }}",
+              "type": "string"
+            },
+            {
+              "id": "76a6bc2a-b573-42df-8596-86890159b6a0",
+              "name": "uf",
+              "value": "={{ $('Edit Fields1').item.json.uf }}",
+              "type": "number"
+            },
+            {
+              "id": "e3b5d9ba-2666-489d-8582-e667dcc89a4e",
+              "name": "tpm",
+              "value": "={{ $('Edit Fields1').item.json.tpm }}",
+              "type": "number"
+            },
+            {
+              "id": "de65e809-4c2c-4018-843a-5e2cdb8e6416",
+              "name": "vix",
+              "value": "={{ $('Edit Fields1').item.json.vix }}",
+              "type": "number"
+            },
+            {
+              "id": "603811bf-4e24-4e93-8ca0-6c876a67677a",
+              "name": "wti",
+              "value": "={{ $('Edit Fields1').item.json.wti }}",
+              "type": "number"
+            },
+            {
+              "id": "3189c4fc-f1a6-4f73-b48e-d03250c2bdfa",
+              "name": "oro",
+              "value": "={{ $('Edit Fields1').item.json.oro }}",
+              "type": "number"
+            },
+            {
+              "id": "d44f589a-8bce-48b8-82e8-aa5a9d8b48b3",
+              "name": "bono10y",
+              "value": "={{ $('Edit Fields1').item.json.bono10y }}",
+              "type": "number"
+            },
+            {
+              "id": "00d9cb8e-5232-4066-9164-ebe5f1b66c8d",
+              "name": "dxy",
+              "value": "={{ $('Edit Fields1').item.json.dxy }}",
+              "type": "number"
+            },
+            {
+              "id": "d9218a42-6f2d-463c-b9f9-934f612989e0",
+              "name": "cobre",
+              "value": "={{ $('Edit Fields1').item.json.cobre }}",
+              "type": "number"
+            },
+            {
+              "id": "ba8cfbb3-ca5f-4745-b2db-52d0b757a787",
+              "name": "vix_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.vix_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "ba9935b7-c257-4ea6-bc2f-ea84ce62ffff",
+              "name": "wti_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.wti_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "82d665f0-8f7c-4891-82df-e5533eff8718",
+              "name": "oro_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.oro_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "7e6aa35e-0bb3-4ac3-915b-b6a945ccc347",
+              "name": "bono10y_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.bono10y_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "65aebc0a-3957-4732-ab1b-d5e207e549bc",
+              "name": "dxy_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.dxy_delta }}",
+              "type": "number"
+            },
+            {
+              "id": "95bd4801-4668-4e68-b684-94d83a16d92f",
+              "name": "cobre_delta",
+              "value": "={{ $('Code in JavaScript1').item.json.cobre_delta }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "3e59111e-d2ce-40b2-adf3-2af0bc559df9",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "tableId": "bitacora_tactica",
+        "dataToSend": "autoMapInputData"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        0
+      ],
+      "id": "c35d1166-b1ad-4f5a-8798-7d105991de49",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "qiGh7NSEqqiYpJQ1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -992,
+        192
+      ],
+      "id": "82b2c9f7-61df-48e5-8c2f-8d734970d3d1",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {
+    "Message a model2": [
+      {
+        "json": {
+          "content": {
+            "parts": [
+              {
+                "text": "[BITÁCORA DE CÁLCULO]: VIX en 31.05, Oro en +3.33% y WTI en +7.09%. Se activa la Condición B de Cisne Negro (VIX > 30 Y oro_delta > 3% Y wti_delta > 4%). La acción es liquidar riesgo y buscar activos duros. El capital actual está en riesgo tecnológico (Silicon Fund y Nasdaq100), por lo tanto, se requiere un cambio de trinchera a GLD.\n\n[ESTADO]: CISNE NEGRO\n\n[NIVEL DE MIEDO]: VIX: 31.05 (13.16%). DXY: 100.193 (0.29%).\n[PULSO FÍSICO]: Oro: 4521.3 (3.33%). WTI: 101.18 (7.09%). Cobre: 5.462 (0.28%).\n[ESCUDO LOCAL]: UF: 39841.72. TPM: 4.5%.\n\n[ORDEN DE EJECUCIÓN]: COMPRAR — Ticker: GLD. Monto: 100% de la Caja Táctica (CL$50299)."
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Message a model2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "727d8ef7-e0ac-4db1-b929-1f6c20e5a6dc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "51b580937e1306058770a877bba04ee7bd40b9b9aae074bd6bf3b078006b5216"
+  },
+  "id": "PLpB0Z3sBoaO89fUvSJOu",
+  "tags": []
+}
