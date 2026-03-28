@@ -32,7 +32,7 @@ export default async function RadarDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans selection:bg-blue-500/30">
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-        
+
         {/* HEADER TÁCTICO */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800/60 pb-5">
           <div>
@@ -44,7 +44,16 @@ export default async function RadarDashboard() {
           <div className="text-left md:text-right mt-4 md:mt-0 bg-slate-900 p-3 md:px-5 rounded-lg border border-slate-800 shadow-sm">
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Última actualización (Valparaíso)</p>
             <p className="font-mono text-sm text-emerald-400 font-semibold">
-              {new Date(ultimoRegistro.fecha).toLocaleString('es-CL')}
+              {new Date(ultimoRegistro.fecha).toLocaleString('es-CL', {
+                timeZone: 'America/Santiago',
+                hour12: false,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              }).replace(',', ' |')}
             </p>
           </div>
         </header>
@@ -81,7 +90,7 @@ export default async function RadarDashboard() {
           <Widget title="Cobre" valor={ultimoRegistro.cobre} delta={ultimoRegistro.cobre_delta} />
           <Widget title="Dólar DXY" valor={ultimoRegistro.dxy} delta={ultimoRegistro.dxy_delta} inverso={true} />
           <Widget title="Bono 10Y" valor={ultimoRegistro.bono10y} delta={ultimoRegistro.bono10y_delta} inverso={true} />
-          
+
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex flex-col justify-between hover:bg-slate-800/80 transition-colors">
             <p className="text-slate-500 text-xs uppercase tracking-widest font-semibold mb-2">Escudo UF</p>
             <p className="text-2xl font-mono text-white">${ultimoRegistro.uf}</p>
@@ -100,7 +109,7 @@ export default async function RadarDashboard() {
 // Subcomponente reutilizable
 function Widget({ title, valor, delta, inverso = false }) {
   const isPositive = delta > 0;
-  const isGood = inverso ? !isPositive : isPositive; 
+  const isGood = inverso ? !isPositive : isPositive;
   const colorClass = isGood ? 'text-emerald-400' : 'text-red-400';
   const Icon = isPositive ? TrendingUp : TrendingDown;
 
