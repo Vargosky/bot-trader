@@ -1,7 +1,8 @@
+import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import { 
   AlertTriangle, TrendingUp, TrendingDown, Activity, 
-  Cpu, CheckCircle2, XCircle, ShieldAlert, Calculator 
+  Cpu, CheckCircle2, XCircle, ShieldAlert, Calculator, Zap 
 } from 'lucide-react';
 
 // Conexión a Supabase
@@ -32,21 +33,21 @@ export default async function RadarDashboard() {
     }
   };
 
-  // 1. INTENTAMOS PARSEAR LA BITÁCORA (Por si Supabase la guardó como String en lugar de JSONB)
+  // 1. INTENTAMOS PARSEAR LA BITÁCORA
   let bitacoraObj = null;
   try {
     bitacoraObj = typeof ultimoRegistro.bitacora_calculo === 'string' 
       ? JSON.parse(ultimoRegistro.bitacora_calculo) 
       : ultimoRegistro.bitacora_calculo;
   } catch (e) {
-    // Si falla (ej. datos viejos en texto plano), bitacoraObj queda en null
+    // Fallback
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans selection:bg-blue-500/30">
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
 
-        {/* HEADER TÁCTICO (Sin cambios, estaba perfecto) */}
+        {/* HEADER TÁCTICO */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800/60 pb-5">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
@@ -89,55 +90,54 @@ export default async function RadarDashboard() {
           </div>
         </div>
 
-        {/* LA EXPLICACIÓN (AHORA ESTRUCTURADA COMO TABLERO) */}
+        {/* LA EXPLICACIÓN ESTRUCTURADA */}
         <div className="w-full bg-slate-900/50 border border-slate-800 p-6 md:p-8 rounded-2xl shadow-lg">
           <h3 className="text-sm uppercase tracking-widest text-blue-400 mb-6 flex items-center gap-2 font-bold">
             <Cpu size={18} /> Justificación Analítica del Motor
           </h3>
 
           {bitacoraObj && bitacoraObj.componentes ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              {/* Columna Izquierda: Tabla de Score Base */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <h4 className="text-slate-300 font-semibold flex items-center gap-2">
-                    <Calculator size={16} className="text-slate-400"/> Score Base
-                  </h4>
-                  <span className="bg-slate-800 text-white font-mono px-2 py-1 rounded text-xs">
-                    Total: {bitacoraObj.score_base_total} pts
-                  </span>
-                </div>
+            <>
+              {/* GRID DE 2 COLUMNAS (Score Base y Correlaciones) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="text-slate-500 border-b border-slate-800">
-                        <th className="pb-2 font-medium">Componente</th>
-                        <th className="pb-2 font-medium">Valor</th>
-                        <th className="pb-2 font-medium text-right">Puntos</th>
-                      </tr>
-                    </thead>
-                    <tbody className="font-mono">
-                      {bitacoraObj.componentes.map((c, i) => (
-                        <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
-                          <td className="py-3 text-slate-300">{c.nombre}</td>
-                          <td className="py-3 text-slate-400">{c.valor}</td>
-                          <td className={`py-3 text-right font-bold ${c.puntos > 0 ? 'text-rose-400' : c.puntos < 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                            {c.puntos > 0 ? `+${c.puntos}` : c.puntos}
-                          </td>
+                {/* Columna Izquierda: Tabla de Score Base */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h4 className="text-slate-300 font-semibold flex items-center gap-2">
+                      <Calculator size={16} className="text-slate-400"/> Score Base
+                    </h4>
+                    <span className="bg-slate-800 text-white font-mono px-2 py-1 rounded text-xs">
+                      Total: {bitacoraObj.score_base_total} pts
+                    </span>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="text-slate-500 border-b border-slate-800">
+                          <th className="pb-2 font-medium">Componente</th>
+                          <th className="pb-2 font-medium">Valor</th>
+                          <th className="pb-2 font-medium text-right">Puntos</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="font-mono">
+                        {bitacoraObj.componentes.map((c, i) => (
+                          <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                            <td className="py-3 text-slate-300">{c.nombre}</td>
+                            <td className="py-3 text-slate-400">{c.valor}</td>
+                            <td className={`py-3 text-right font-bold ${c.puntos > 0 ? 'text-rose-400' : c.puntos < 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                              {c.puntos > 0 ? `+${c.puntos}` : c.puntos}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
 
-              {/* Columna Derecha: Correlaciones y Resolución */}
-              <div className="space-y-6">
-                
-                {/* Correlaciones Cruzadas */}
-                <div>
+                {/* Columna Derecha: Correlaciones Cruzadas */}
+                <div className="space-y-4">
                   <h4 className="text-slate-300 font-semibold border-b border-slate-800 pb-2 mb-4">
                     Correlaciones Cruzadas
                   </h4>
@@ -162,33 +162,55 @@ export default async function RadarDashboard() {
                     ))}
                   </div>
                 </div>
-
-                {/* Veredicto y Veto */}
-                {bitacoraObj.resolucion && (
-                  <div className={`p-4 rounded-xl border ${bitacoraObj.resolucion.veto_booleano_rojo ? 'bg-red-950/20 border-red-900/30' : 'bg-slate-800/30 border-slate-700'}`}>
-                    <h4 className="text-xs uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2 font-bold">
-                      <ShieldAlert size={14} /> Resolución Operativa
-                    </h4>
-                    <p className="text-sm text-slate-300 mb-2">
-                      <span className="text-slate-500">Motivo de veto:</span> {bitacoraObj.resolucion.motivo_veto}
-                    </p>
-                    <p className="text-sm text-slate-300">
-                      <span className="text-slate-500">Evaluación:</span> {bitacoraObj.resolucion.evaluacion_operativa}
-                    </p>
-                  </div>
-                )}
               </div>
 
-            </div>
+              {/* ANCHO COMPLETO: BOTÓN Y RESOLUCIÓN OPERATIVA */}
+              {bitacoraObj.resolucion && (
+                <div className="w-full flex flex-col items-start space-y-6 border-t border-slate-800 pt-8">
+                  
+                  {/* BOTÓN PROYECCIÓN ACTUALIZADO A LINK VISIBLE */}
+                  <Link 
+                    href="/proyeccion"
+                    className="group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-xl border border-blue-400/30 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all flex items-center gap-3 uppercase tracking-widest text-sm md:text-base w-full md:w-auto justify-center"
+                  >
+                    <Zap size={20} className="text-yellow-300 group-hover:animate-pulse" /> 
+                    Ver Proyección Táctica
+                  </Link>
+
+                  {/* CAJA DE RESOLUCIÓN */}
+                  <div className={`w-full p-6 md:p-8 rounded-xl border shadow-inner ${bitacoraObj.resolucion.veto_booleano_rojo ? 'bg-red-950/20 border-red-900/40' : 'bg-slate-800/30 border-slate-700/50'}`}>
+                    <h4 className="text-sm uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2 font-bold">
+                      <ShieldAlert size={18} className={bitacoraObj.resolucion.veto_booleano_rojo ? 'text-red-400' : 'text-slate-400'}/> 
+                      Resolución Operativa
+                    </h4>
+                    
+                    <div className="space-y-5">
+                      <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-medium">
+                        <span className="text-slate-500 block text-xs uppercase mb-1 font-bold tracking-widest">Motivo de veto / Acción:</span> 
+                        {bitacoraObj.resolucion.motivo_veto}
+                      </p>
+                      
+                      <div className="h-px w-full bg-slate-700/50 my-2"></div>
+                      
+                      <p className="text-lg md:text-xl text-slate-200 leading-relaxed">
+                        <span className="text-slate-500 block text-xs uppercase mb-1 font-bold tracking-widest">Evaluación Operativa:</span> 
+                        {bitacoraObj.resolucion.evaluacion_operativa}
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </>
           ) : (
-            // FALLBACK: Si no hay JSON válido, muestra el texto plano antiguo
+            // FALLBACK
             <p className="text-lg text-slate-300 leading-relaxed font-mono bg-slate-900 p-6 rounded-xl border border-slate-800">
               {ultimoRegistro.bitacora_calculo}
             </p>
           )}
         </div>
 
-        {/* TABLERO DE TELEMETRÍA (Sin cambios) */}
+        {/* TABLERO DE TELEMETRÍA */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
           <Widget title="Índice VIX" valor={ultimoRegistro.vix} delta={ultimoRegistro.vix_delta} inverso={true} />
           <Widget title="Crudo WTI" valor={ultimoRegistro.wti} delta={ultimoRegistro.wti_delta} />
@@ -212,7 +234,7 @@ export default async function RadarDashboard() {
   );
 }
 
-// Subcomponente reutilizable (Sin cambios mayores)
+// Subcomponente reutilizable
 function Widget({ title, valor, delta, inverso = false }) {
   const isPositive = delta > 0;
   const isGood = inverso ? !isPositive : isPositive;
