@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
-import { ChevronLeft, Activity, Target, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ChevronLeft, Activity, Target, AlertTriangle, TrendingUp, TrendingDown, Minus, ExternalLink, Calendar, Newspaper, X } from "lucide-react";
+import NoticiasClavesModal from "@/app/components/NoticiasClavesModal";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -63,8 +64,6 @@ function MetricRow({ label, min, max, unit = "", globalMin, globalMax, barColor 
   );
 }
 
-// ── Probability Chart Component ────────────────────────────────────────────
-
 function ProbabilityChart({ posProb, neuProb, negProb, empProb }) {
   const scenarios = [
     { label: "ALCISTA", value: posProb, color: "#10b981", icon: TrendingUp },
@@ -84,7 +83,6 @@ function ProbabilityChart({ posProb, neuProb, negProb, empProb }) {
               <Icon size={16} style={{ color: sc.color }} />
               <span className="text-xs font-mono text-slate-400 w-20">{sc.label}</span>
               
-              {/* Barra de probabilidad */}
               <div className="flex-grow bg-slate-800/50 rounded-full h-2 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
@@ -104,7 +102,6 @@ function ProbabilityChart({ posProb, neuProb, negProb, empProb }) {
         })}
       </div>
 
-      {/* Total validation */}
       <div className="pt-3 border-t border-slate-800/50 flex justify-between items-center">
         <span className="text-[10px] text-slate-500 uppercase tracking-wider">Total</span>
         <span className="text-sm font-bold text-slate-300">
@@ -115,9 +112,7 @@ function ProbabilityChart({ posProb, neuProb, negProb, empProb }) {
   );
 }
 
-// ── Most Probable Scenario Component ───────────────────────────────────────
-
-function EscenarioMasProbable({ data, expanded, toggleExpand }) {
+function EscenarioMasProbable({ data, expanded, toggleExpand, onShowNoticias }) {
   const empNombre = data?.emp_nombre;
   const empProb = data?.emp_probabilidad;
   const empConfianza = data?.emp_confianza_comentario;
@@ -127,7 +122,6 @@ function EscenarioMasProbable({ data, expanded, toggleExpand }) {
 
   if (!empNombre) return null;
 
-  // Determinar color basado en probabilidad
   let bgGlow, accent, textColor;
   if (empProb >= 60) {
     bgGlow = "0 0 50px rgba(245,158,11,0.1)";
@@ -153,7 +147,6 @@ function EscenarioMasProbable({ data, expanded, toggleExpand }) {
         boxShadow: bgGlow,
       }}
     >
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -167,7 +160,6 @@ function EscenarioMasProbable({ data, expanded, toggleExpand }) {
           </p>
         </div>
         
-        {/* Probability Badge */}
         <div className="flex flex-col items-center bg-slate-950/60 px-6 py-4 rounded-xl border border-slate-800">
           <span className="text-[10px] tracking-widest text-slate-500 uppercase font-bold mb-1">Probabilidad</span>
           <span className="text-3xl font-bold" style={{ color: accent }}>
@@ -178,7 +170,6 @@ function EscenarioMasProbable({ data, expanded, toggleExpand }) {
 
       <div className="h-px w-full bg-slate-800 mb-6" />
 
-      {/* Confianza */}
       {empConfianza && (
         <div className="mb-6 p-4 bg-slate-950/50 rounded-lg border-l-2 border-current" style={{ borderLeftColor: accent }}>
           <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-2">Nivel de Confianza</h4>
@@ -188,7 +179,6 @@ function EscenarioMasProbable({ data, expanded, toggleExpand }) {
         </div>
       )}
 
-      {/* Narrativa Ejecutiva */}
       {empNarrativa && (
         <div className="mb-6">
           <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-3">Narrativa Ejecutiva</h4>
@@ -207,17 +197,25 @@ function EscenarioMasProbable({ data, expanded, toggleExpand }) {
         </div>
       )}
 
-      {/* Noticias Clave */}
       {empNoticias && (
-        <div className="mb-6 p-4 bg-slate-950/50 rounded-lg">
-          <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-2">Noticias Clave</h4>
-          <p className="text-sm font-mono text-slate-400">
-            {empNoticias}
-          </p>
+        <div className="mb-6 p-4 bg-slate-950/50 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-2">Noticias Clave</h4>
+            <p className="text-sm font-mono text-slate-400">
+              {empNoticias}
+            </p>
+          </div>
+          
+          <button
+            onClick={() => onShowNoticias(empNoticias)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors whitespace-nowrap flex items-center gap-2 md:ml-4"
+          >
+            <Newspaper size={16} />
+            Ver Noticias
+          </button>
         </div>
       )}
 
-      {/* Riesgo de Reversión */}
       {empRiesgo && (
         <div className="p-4 bg-red-950/30 border border-red-900/50 rounded-lg">
           <h4 className="text-xs tracking-[0.2em] text-red-400 uppercase font-bold mb-2 flex items-center gap-2">
@@ -280,6 +278,8 @@ export default function PanelEscenariosDB() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState({});
+  const [showNoticiasClavesModal, setShowNoticiasClavesModal] = useState(false);
+  const [noticiasClavesSeleccionadas, setNoticiasClavesSeleccionadas] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -301,6 +301,11 @@ export default function PanelEscenariosDB() {
   }, []);
 
   const toggleExpand = (key) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const handleShowNoticias = (noticias_clave) => {
+    setNoticiasClavesSeleccionadas(noticias_clave);
+    setShowNoticiasClavesModal(true);
+  };
 
   if (loading) {
     return (
@@ -336,7 +341,6 @@ export default function PanelEscenariosDB() {
       
       <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-8">
         
-        {/* ── HEADER ── */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800/60 pb-5">
           <div>
             <div className="flex items-center gap-4 mb-3">
@@ -360,10 +364,13 @@ export default function PanelEscenariosDB() {
           </div>
         </header>
 
-        {/* ── ESCENARIO MÁS PROBABLE (DESTACADO) ── */}
-        <EscenarioMasProbable data={data} expanded={expanded} toggleExpand={toggleExpand} />
+        <EscenarioMasProbable 
+          data={data} 
+          expanded={expanded} 
+          toggleExpand={toggleExpand}
+          onShowNoticias={handleShowNoticias}
+        />
 
-        {/* ── PROBABILITY DISTRIBUTION ── */}
         <ProbabilityChart 
           posProb={data.pos_probabilidad || 0}
           neuProb={data.neu_probabilidad || 0}
@@ -371,7 +378,6 @@ export default function PanelEscenariosDB() {
           empProb={data.emp_probabilidad || 0}
         />
 
-        {/* ── SCENARIO GRID (3 COLUMNAS) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {SCENARIOS.map((sc, idx) => {
             const nombre = data[`${sc.key}_nombre`];
@@ -390,7 +396,6 @@ export default function PanelEscenariosDB() {
                   boxShadow: sc.glowColor,
                 }}
               >
-                {/* Card header */}
                 <div className="flex items-center justify-between mb-4">
                   <span className={`text-sm md:text-base font-bold tracking-[0.15em] ${sc.textAccent}`}>
                     {sc.labelShort}
@@ -400,7 +405,6 @@ export default function PanelEscenariosDB() {
                   </span>
                 </div>
 
-                {/* Nombre + Probabilidad */}
                 <div className="flex justify-between items-start gap-4 mb-4">
                   <h3 className="text-xl md:text-2xl font-serif font-semibold leading-snug text-slate-100">
                     {nombre ?? "—"}
@@ -417,7 +421,6 @@ export default function PanelEscenariosDB() {
 
                 <div className="h-px w-full bg-slate-800 mb-6" />
 
-                {/* Narrativa */}
                 <div className="flex flex-col gap-3 flex-grow mb-8">
                   <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold">Análisis</h4>
                   <p className={`text-sm leading-relaxed font-mono text-slate-400 ${isOpen ? '' : 'line-clamp-5'}`}>
@@ -434,7 +437,6 @@ export default function PanelEscenariosDB() {
                   )}
                 </div>
 
-                {/* Gatillante */}
                 <div className="p-4 bg-black/20 rounded-xl mb-8 border-l-2" style={{ borderLeftColor: sc.accent }}>
                   <h4 className="text-[10px] tracking-[0.2em] text-slate-500 uppercase font-bold mb-2">Gatillante Principal</h4>
                   <p className="text-sm leading-relaxed text-slate-300 italic">
@@ -442,7 +444,6 @@ export default function PanelEscenariosDB() {
                   </p>
                 </div>
 
-                {/* Rangos proyectados */}
                 <div className="flex flex-col gap-4 mt-auto">
                   <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold">Rangos Proyectados (Próx. Semana)</h4>
                   <div className="flex flex-col gap-3 bg-slate-950/40 p-5 rounded-xl border border-slate-800/50">
@@ -465,13 +466,19 @@ export default function PanelEscenariosDB() {
           })}
         </div>
 
-        {/* ── FOOTER ── */}
         <footer className="pt-8 pb-4 text-center">
           <span className="text-xs tracking-widest text-slate-600 uppercase font-mono">
             GENERADO VÍA IA · SOLO REFERENCIAL · NO CONSTITUYE ASESORÍA FINANCIERA
           </span>
         </footer>
       </div>
+
+      {/* Modal de Noticias */}
+      <NoticiasClavesModal 
+        isOpen={showNoticiasClavesModal} 
+        onClose={() => setShowNoticiasClavesModal(false)}
+        noticias_clave={noticiasClavesSeleccionadas}
+      />
     </div>
   );
 }
