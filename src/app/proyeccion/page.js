@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
-import { ChevronLeft, Activity, Target } from "lucide-react";
+import { ChevronLeft, Activity, Target, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -16,12 +16,6 @@ function fmt(n, decimals = 1) {
   if (n === null || n === undefined) return "—";
   const v = parseFloat(n);
   return isNaN(v) ? "—" : v.toFixed(decimals);
-}
-
-function fmtRange(min, max, unit = "") {
-  if (min === null && max === null) return "—";
-  const sign = (v) => (v > 0 ? "+" : "");
-  return `${sign(min)}${fmt(min)}${unit} → ${sign(max)}${fmt(max)}${unit}`;
 }
 
 function stripMarkdown(text) {
@@ -69,6 +63,176 @@ function MetricRow({ label, min, max, unit = "", globalMin, globalMax, barColor 
   );
 }
 
+// ── Probability Chart Component ────────────────────────────────────────────
+
+function ProbabilityChart({ posProb, neuProb, negProb, empProb }) {
+  const scenarios = [
+    { label: "ALCISTA", value: posProb, color: "#10b981", icon: TrendingUp },
+    { label: "NEUTRO", value: neuProb, color: "#f59e0b", icon: Minus },
+    { label: "BEAR", value: negProb, color: "#ef4444", icon: TrendingDown },
+  ];
+
+  return (
+    <div className="bg-slate-950/50 border border-slate-800/50 rounded-xl p-6 space-y-4">
+      <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold">Distribución de Probabilidades</h4>
+      
+      <div className="space-y-3">
+        {scenarios.map((sc) => {
+          const Icon = sc.icon;
+          return (
+            <div key={sc.label} className="flex items-center gap-3">
+              <Icon size={16} style={{ color: sc.color }} />
+              <span className="text-xs font-mono text-slate-400 w-20">{sc.label}</span>
+              
+              {/* Barra de probabilidad */}
+              <div className="flex-grow bg-slate-800/50 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${sc.value}%`,
+                    background: sc.color,
+                    opacity: 0.85,
+                  }}
+                />
+              </div>
+              
+              <span className="text-xs font-bold text-right w-12" style={{ color: sc.color }}>
+                {sc.value}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Total validation */}
+      <div className="pt-3 border-t border-slate-800/50 flex justify-between items-center">
+        <span className="text-[10px] text-slate-500 uppercase tracking-wider">Total</span>
+        <span className="text-sm font-bold text-slate-300">
+          {posProb + neuProb + negProb}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Most Probable Scenario Component ───────────────────────────────────────
+
+function EscenarioMasProbable({ data, expanded, toggleExpand }) {
+  const empNombre = data?.emp_nombre;
+  const empProb = data?.emp_probabilidad;
+  const empConfianza = data?.emp_confianza_comentario;
+  const empNoticias = data?.emp_noticias_clave;
+  const empNarrativa = data?.emp_narrativa_ejecutiva;
+  const empRiesgo = data?.emp_riesgo_reversión;
+
+  if (!empNombre) return null;
+
+  // Determinar color basado en probabilidad
+  let bgGlow, accent, textColor;
+  if (empProb >= 60) {
+    bgGlow = "0 0 50px rgba(245,158,11,0.1)";
+    accent = "#f59e0b";
+    textColor = "text-amber-400";
+  } else if (empProb >= 40) {
+    bgGlow = "0 0 50px rgba(59,130,246,0.1)";
+    accent = "#3b82f6";
+    textColor = "text-blue-400";
+  } else {
+    bgGlow = "0 0 50px rgba(16,185,129,0.1)";
+    accent = "#10b981";
+    textColor = "text-emerald-400";
+  }
+
+  const isOpen = expanded["emp"];
+
+  return (
+    <div
+      className="w-full p-8 rounded-2xl border-2 border-slate-700 shadow-2xl bg-slate-900/40 backdrop-blur-sm"
+      style={{
+        borderColor: accent,
+        boxShadow: bgGlow,
+      }}
+    >
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Activity size={24} style={{ color: accent }} />
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-100">
+              ESCENARIO MÁS PROBABLE
+            </h2>
+          </div>
+          <p className={`text-sm font-mono ${textColor}`}>
+            {empNombre}
+          </p>
+        </div>
+        
+        {/* Probability Badge */}
+        <div className="flex flex-col items-center bg-slate-950/60 px-6 py-4 rounded-xl border border-slate-800">
+          <span className="text-[10px] tracking-widest text-slate-500 uppercase font-bold mb-1">Probabilidad</span>
+          <span className="text-3xl font-bold" style={{ color: accent }}>
+            {empProb}%
+          </span>
+        </div>
+      </div>
+
+      <div className="h-px w-full bg-slate-800 mb-6" />
+
+      {/* Confianza */}
+      {empConfianza && (
+        <div className="mb-6 p-4 bg-slate-950/50 rounded-lg border-l-2 border-current" style={{ borderLeftColor: accent }}>
+          <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-2">Nivel de Confianza</h4>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            {stripMarkdown(empConfianza)}
+          </p>
+        </div>
+      )}
+
+      {/* Narrativa Ejecutiva */}
+      {empNarrativa && (
+        <div className="mb-6">
+          <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-3">Narrativa Ejecutiva</h4>
+          <p className={`text-sm leading-relaxed text-slate-300 font-mono ${isOpen ? '' : 'line-clamp-4'}`}>
+            {stripMarkdown(empNarrativa)}
+          </p>
+          {empNarrativa && empNarrativa.length > 300 && (
+            <button
+              onClick={() => toggleExpand("emp")}
+              className="text-xs tracking-widest font-bold uppercase mt-3 transition-opacity hover:opacity-70"
+              style={{ color: accent }}
+            >
+              {isOpen ? "▲ VER MENOS" : "▼ VER COMPLETO"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Noticias Clave */}
+      {empNoticias && (
+        <div className="mb-6 p-4 bg-slate-950/50 rounded-lg">
+          <h4 className="text-xs tracking-[0.2em] text-slate-500 uppercase font-bold mb-2">Noticias Clave</h4>
+          <p className="text-sm font-mono text-slate-400">
+            {empNoticias}
+          </p>
+        </div>
+      )}
+
+      {/* Riesgo de Reversión */}
+      {empRiesgo && (
+        <div className="p-4 bg-red-950/30 border border-red-900/50 rounded-lg">
+          <h4 className="text-xs tracking-[0.2em] text-red-400 uppercase font-bold mb-2 flex items-center gap-2">
+            <AlertTriangle size={16} />
+            Riesgo de Reversión (48-72h)
+          </h4>
+          <p className="text-sm text-red-300 leading-relaxed">
+            {stripMarkdown(empRiesgo)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const METRICS = [
   { key: "vix",     label: "VIX",    unit: "",  globalMin: 10, globalMax: 45 },
   { key: "wti",     label: "WTI",    unit: "",  globalMin: 80, globalMax: 160 },
@@ -84,7 +248,7 @@ const SCENARIOS = [
     key: "pos",
     label: "BULL CASE",
     labelShort: "↑ ALCISTA",
-    accent: "#10b981", // Emerald 500
+    accent: "#10b981",
     bgDim: "bg-emerald-950/10",
     textAccent: "text-emerald-400",
     glowColor: "0 0 40px rgba(16,185,129,0.07)",
@@ -93,7 +257,7 @@ const SCENARIOS = [
     key: "neu",
     label: "BASE CASE",
     labelShort: "→ NEUTRO",
-    accent: "#f59e0b", // Amber 500
+    accent: "#f59e0b",
     bgDim: "bg-amber-950/10",
     textAccent: "text-amber-400",
     glowColor: "0 0 40px rgba(245,158,11,0.07)",
@@ -102,7 +266,7 @@ const SCENARIOS = [
     key: "neg",
     label: "BEAR CASE",
     labelShort: "↓ CISNE NEGRO",
-    accent: "#ef4444", // Red 500
+    accent: "#ef4444",
     bgDim: "bg-red-950/10",
     textAccent: "text-red-400",
     glowColor: "0 0 40px rgba(239,68,68,0.09)",
@@ -170,7 +334,6 @@ export default function PanelEscenariosDB() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans selection:bg-blue-500/30">
       
-      {/* Contenedor extra ancho (1600px) para que respiren las 3 columnas */}
       <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-8">
         
         {/* ── HEADER ── */}
@@ -197,12 +360,24 @@ export default function PanelEscenariosDB() {
           </div>
         </header>
 
-        {/* ── SCENARIO GRID ── */}
+        {/* ── ESCENARIO MÁS PROBABLE (DESTACADO) ── */}
+        <EscenarioMasProbable data={data} expanded={expanded} toggleExpand={toggleExpand} />
+
+        {/* ── PROBABILITY DISTRIBUTION ── */}
+        <ProbabilityChart 
+          posProb={data.pos_probabilidad || 0}
+          neuProb={data.neu_probabilidad || 0}
+          negProb={data.neg_probabilidad || 0}
+          empProb={data.emp_probabilidad || 0}
+        />
+
+        {/* ── SCENARIO GRID (3 COLUMNAS) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {SCENARIOS.map((sc, idx) => {
             const nombre = data[`${sc.key}_nombre`];
             const narrativa = data[`${sc.key}_narrativa`];
             const gatillante = data[`${sc.key}_gatillante`];
+            const probabilidad = data[`${sc.key}_probabilidad`];
             const isOpen = expanded[sc.key];
 
             return (
@@ -225,10 +400,20 @@ export default function PanelEscenariosDB() {
                   </span>
                 </div>
 
-                {/* Nombre */}
-                <h3 className="text-xl md:text-2xl font-serif font-semibold leading-snug text-slate-100 mb-6">
-                  {nombre ?? "—"}
-                </h3>
+                {/* Nombre + Probabilidad */}
+                <div className="flex justify-between items-start gap-4 mb-4">
+                  <h3 className="text-xl md:text-2xl font-serif font-semibold leading-snug text-slate-100">
+                    {nombre ?? "—"}
+                  </h3>
+                  {probabilidad && (
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Prob.</p>
+                      <p className="text-2xl font-bold" style={{ color: sc.accent }}>
+                        {probabilidad}%
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="h-px w-full bg-slate-800 mb-6" />
 
