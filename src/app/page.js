@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
-import { 
-  AlertTriangle, TrendingUp, TrendingDown, Activity, 
-  Cpu, CheckCircle2, XCircle, ShieldAlert, Calculator, Zap 
+import {
+  AlertTriangle, TrendingUp, TrendingDown, Activity,
+  Cpu, CheckCircle2, XCircle, ShieldAlert, Calculator, Zap
 } from 'lucide-react';
 
 // Conexión a Supabase
@@ -11,7 +11,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export const revalidate = 60; 
+export const revalidate = 60;
 
 export default async function RadarDashboard() {
   const { data: ultimoRegistro } = await supabase
@@ -36,8 +36,8 @@ export default async function RadarDashboard() {
   // 1. INTENTAMOS PARSEAR LA BITÁCORA
   let bitacoraObj = null;
   try {
-    bitacoraObj = typeof ultimoRegistro.bitacora_calculo === 'string' 
-      ? JSON.parse(ultimoRegistro.bitacora_calculo) 
+    bitacoraObj = typeof ultimoRegistro.bitacora_calculo === 'string'
+      ? JSON.parse(ultimoRegistro.bitacora_calculo)
       : ultimoRegistro.bitacora_calculo;
   } catch (e) {
     // Fallback
@@ -64,18 +64,20 @@ export default async function RadarDashboard() {
                 hour: '2-digit', minute: '2-digit', second: '2-digit'
               }).replace(',', ' |')}
             </p>
+
           </div>
         </header>
 
-        {/* ALERTA VISUAL: SEMÁFORO Y ORDEN */}
+
+
         <div className={`w-full p-8 md:p-12 rounded-2xl border ${getColorSemaforo(ultimoRegistro.estado_ia)} flex flex-col items-center text-center transition-all duration-500 relative overflow-hidden`}>
           <div className="absolute top-4 right-4 flex gap-3">
-             <div className="bg-black/40 px-3 py-1 rounded-md text-xs font-mono border border-current/20">
-               SCORE: {ultimoRegistro.risk_score || 'N/A'}
-             </div>
-             <div className="bg-black/40 px-3 py-1 rounded-md text-xs font-mono border border-current/20">
-               CONF: {ultimoRegistro.confianza || 'N/A'}%
-             </div>
+            <div className="bg-black/40 px-3 py-1 rounded-md text-xs font-mono border border-current/20">
+              SCORE: {ultimoRegistro.risk_score || 'N/A'}
+            </div>
+            <div className="bg-black/40 px-3 py-1 rounded-md text-xs font-mono border border-current/20">
+              CONF: {ultimoRegistro.confianza || 'N/A'}%
+            </div>
           </div>
 
           <p className="text-sm uppercase tracking-[0.2em] opacity-80 mb-4 font-bold">Estado Actual de la Matriz</p>
@@ -90,6 +92,7 @@ export default async function RadarDashboard() {
           </div>
         </div>
 
+
         {/* LA EXPLICACIÓN ESTRUCTURADA */}
         <div className="w-full bg-slate-900/50 border border-slate-800 p-6 md:p-8 rounded-2xl shadow-lg">
           <h3 className="text-sm uppercase tracking-widest text-blue-400 mb-6 flex items-center gap-2 font-bold">
@@ -100,18 +103,18 @@ export default async function RadarDashboard() {
             <>
               {/* GRID DE 2 COLUMNAS (Score Base y Correlaciones) */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                
+
                 {/* Columna Izquierda: Tabla de Score Base */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <h4 className="text-slate-300 font-semibold flex items-center gap-2">
-                      <Calculator size={16} className="text-slate-400"/> Score Base
+                      <Calculator size={16} className="text-slate-400" /> Score Base
                     </h4>
                     <span className="bg-slate-800 text-white font-mono px-2 py-1 rounded text-xs">
                       Total: {bitacoraObj.score_base_total} pts
                     </span>
                   </div>
-                  
+
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                       <thead>
@@ -145,7 +148,7 @@ export default async function RadarDashboard() {
                     {bitacoraObj.correlaciones_cruzadas.map((corr, i) => (
                       <div key={i} className="flex gap-3 text-sm p-3 rounded-lg bg-slate-900 border border-slate-800/80">
                         <div className="flex-shrink-0 mt-0.5">
-                          {corr.activa 
+                          {corr.activa
                             ? <CheckCircle2 size={16} className="text-emerald-500" />
                             : <XCircle size={16} className="text-slate-600" />
                           }
@@ -167,33 +170,33 @@ export default async function RadarDashboard() {
               {/* ANCHO COMPLETO: BOTÓN Y RESOLUCIÓN OPERATIVA */}
               {bitacoraObj.resolucion && (
                 <div className="w-full flex flex-col items-start space-y-6 border-t border-slate-800 pt-8">
-                  
+
                   {/* BOTÓN PROYECCIÓN ACTUALIZADO A LINK VISIBLE */}
-                  <Link 
+                  <Link
                     href="/proyeccion"
-                    className="group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-xl border border-blue-400/30 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all flex items-center gap-3 uppercase tracking-widest text-sm md:text-base w-full md:w-auto justify-center"
+                    className="group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-xl border border-blue-400/30 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all flex items-center gap-3 uppercase tracking-widest text-xl md:text-base w-full md:w-auto justify-center"
                   >
-                    <Zap size={20} className="text-yellow-300 group-hover:animate-pulse" /> 
-                    Ver Proyección Táctica
+                    <Zap size={28} className="text-yellow-300 group-hover:animate-pulse" />
+                    Proyección 5 días con noticias económicas y financieras de las ultimas 48 horas con IA
                   </Link>
 
                   {/* CAJA DE RESOLUCIÓN */}
                   <div className={`w-full p-6 md:p-8 rounded-xl border shadow-inner ${bitacoraObj.resolucion.veto_booleano_rojo ? 'bg-red-950/20 border-red-900/40' : 'bg-slate-800/30 border-slate-700/50'}`}>
                     <h4 className="text-sm uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2 font-bold">
-                      <ShieldAlert size={18} className={bitacoraObj.resolucion.veto_booleano_rojo ? 'text-red-400' : 'text-slate-400'}/> 
+                      <ShieldAlert size={18} className={bitacoraObj.resolucion.veto_booleano_rojo ? 'text-red-400' : 'text-slate-400'} />
                       Resolución Operativa
                     </h4>
-                    
+
                     <div className="space-y-5">
                       <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-medium">
-                        <span className="text-slate-500 block text-xs uppercase mb-1 font-bold tracking-widest">Motivo de veto / Acción:</span> 
+                        <span className="text-slate-500 block text-xs uppercase mb-1 font-bold tracking-widest">Motivo de veto / Acción:</span>
                         {bitacoraObj.resolucion.motivo_veto}
                       </p>
-                      
+
                       <div className="h-px w-full bg-slate-700/50 my-2"></div>
-                      
+
                       <p className="text-lg md:text-xl text-slate-200 leading-relaxed">
-                        <span className="text-slate-500 block text-xs uppercase mb-1 font-bold tracking-widest">Evaluación Operativa:</span> 
+                        <span className="text-slate-500 block text-xs uppercase mb-1 font-bold tracking-widest">Evaluación Operativa:</span>
                         {bitacoraObj.resolucion.evaluacion_operativa}
                       </p>
                     </div>
@@ -228,7 +231,13 @@ export default async function RadarDashboard() {
             <p className="text-2xl font-mono text-white">{ultimoRegistro.tpm}%</p>
           </div>
         </div>
-
+        {/* ALERTA VISUAL: SEMÁFORO Y ORDEN */}
+        <div className="flex items-center gap-2 text-xl text-slate-400 font-mono border border-slate-800/50 bg-slate-900/30 px-5 py-3 rounded-lg mt-4 text-center justify-center">
+          <Link href="/analisis" className="...">
+            Análisis de Patrones Anteriores
+          </Link>
+        </div>
+        {/* FIN ALERTA VISUAL */}
       </div>
     </div>
   );
@@ -252,6 +261,7 @@ function Widget({ title, valor, delta, inverso = false }) {
           <Icon size={14} className="mr-1" />
           {Math.abs(delta)}%
         </p>
+
       </div>
     </div>
   );
