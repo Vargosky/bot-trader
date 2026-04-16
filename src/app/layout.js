@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Radar Táctico Einsoft",
-  description: "Radar Táctico Einsoft: Motor cuantitativo impulsado por IA (Gemini) y n8n. Analiza telemetría macroeconómica global (VIX, Oro, WTI) y local (UF) en tiempo real para evaluar el riesgo sistémico. Emite órdenes de ejecución financiera sin emociones frente a posibles Cisnes Negros. Frontend táctico construido con Next.js, Tailwind y Supabase",
+  title: "Ennyn Durin Aran Moria. Pedo mellon a minno",
+  description: "Ennyn Durin Aran Moria. Pedo mellon a minno",
 };
 
 export default function RootLayout({ children }) {
